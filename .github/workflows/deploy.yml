@@ -82,12 +82,12 @@ jobs:
           docker pull ghcr.io/$OWNER/stock-market-tracker-frontend:latest
 
           # Stop ANY container holding ports 4002/4003 (old compose names or new names)
-          docker ps -q --filter publish=4003 | xargs -r docker stop
-          docker ps -q --filter publish=4002 | xargs -r docker stop
-          docker ps -aq --filter name=stock-market-tracker_backend_1  | xargs -r docker rm
-          docker ps -aq --filter name=stock-market-tracker_frontend_1 | xargs -r docker rm
-          docker ps -aq --filter name=stock-tracker-backend  | xargs -r docker rm
-          docker ps -aq --filter name=stock-tracker-frontend | xargs -r docker rm
+          docker ps -q --filter publish=4003 | xargs -r docker stop || true
+          docker ps -q --filter publish=4002 | xargs -r docker stop || true
+          docker ps -aq --filter name=stock-market-tracker_backend_1  | xargs -r docker rm -f || true
+          docker ps -aq --filter name=stock-market-tracker_frontend_1 | xargs -r docker rm -f || true
+          docker ps -aq --filter name=stock-tracker-backend  | xargs -r docker rm -f || true
+          docker ps -aq --filter name=stock-tracker-frontend | xargs -r docker rm -f || true
           docker run -d \
             --name stock-tracker-backend \
             --restart unless-stopped \
