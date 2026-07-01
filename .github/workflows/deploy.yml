@@ -106,7 +106,11 @@ jobs:
             ghcr.io/$OWNER/stock-market-tracker-frontend:latest
 
           docker image prune -f
-          sleep 4
+          sleep 5
           curl -sf http://localhost:4003/health && echo " backend live"
-          curl -sf -o /dev/null http://localhost:4002 && echo " frontend live"
+          for i in $(seq 1 15); do
+            curl -sf -o /dev/null http://localhost:4002 && echo " frontend live" && break
+            echo "waiting for frontend... ($i)"
+            sleep 2
+          done
           ENDSSH
