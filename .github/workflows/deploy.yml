@@ -1,119 +1,105 @@
-name: Build, Push & Deploy
+name: Build & Deploy
 
 on:
   push:
-    branches:
-      - main
-
-env:
-  REGISTRY: ghcr.io
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 1 — Build Docker images and push to GitHub Container Registry
-  # ──────────────────────────────────────────────────────────────────────────
   build-and-push:
-    name: Build & Push Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
-    outputs:
-      backend_image: ${{ steps.image-names.outputs.backend }}
-      frontend_image: ${{ steps.image-names.outputs.frontend }}
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Compute lowercase image names
-        id: image-names
-        run: |
-          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "backend=ghcr.io/${OWNER}/stock-market-tracker/backend" >> $GITHUB_OUTPUT
-          echo "frontend=ghcr.io/${OWNER}/stock-market-tracker/frontend" >> $GITHUB_OUTPUT
+      - name: Set lowercase owner
+        run: echo "OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # ── Backend ────────────────────────────────────────────────────────────
       - name: Build and push backend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
           target: production
           push: true
-          provenance: false
           tags: |
-            ${{ steps.image-names.outputs.backend }}:latest
-            ${{ steps.image-names.outputs.backend }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ghcr.io/${{ env.OWNER }}/stock-market-tracker-backend:latest
+            ghcr.io/${{ env.OWNER }}/stock-market-tracker-backend:${{ github.sha }}
 
-      # ── Frontend ──────────────────────────────────────────────────────────
       - name: Build and push frontend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          provenance: false
           tags: |
-            ${{ steps.image-names.outputs.frontend }}:latest
-            ${{ steps.image-names.outputs.frontend }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ghcr.io/${{ env.OWNER }}/stock-market-tracker-frontend:latest
+            ghcr.io/${{ env.OWNER }}/stock-market-tracker-frontend:${{ github.sha }}
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 2 — SSH into VPS and roll out the new images
-  # ──────────────────────────────────────────────────────────────────────────
   deploy:
-    name: Deploy to VPS
-    runs-on: ubuntu-latest
     needs: build-and-push
-    permissions:
-      contents: read
-      packages: read
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install SSH key
+      - name: Setup SSH key
         run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -t ed25519 ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Deploy via GHCR images on VPS
+      - name: Deploy to VPS
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
         run: |
-          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          BACKEND_IMAGE="ghcr.io/${OWNER}/stock-market-tracker/backend:latest"
-          FRONTEND_IMAGE="ghcr.io/${OWNER}/stock-market-tracker/frontend:latest"
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin &&
-            cd ~/stock-market-tracker &&
-            git pull origin main &&
-            docker pull ${BACKEND_IMAGE} &&
-            docker pull ${FRONTEND_IMAGE} &&
-            docker stop stock-market-tracker_backend_1 stock-market-tracker_frontend_1 2>/dev/null || true &&
-            docker rm   stock-market-tracker_backend_1 stock-market-tracker_frontend_1 2>/dev/null || true &&
-            BACKEND_IMAGE=${BACKEND_IMAGE} FRONTEND_IMAGE=${FRONTEND_IMAGE} docker-compose -f docker-compose.prod.yml up -d
-          "
+          OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            GHCR_TOKEN="$GHCR_TOKEN" \
+            OWNER="$OWNER" \
+            bash -s << 'ENDSSH'
+          set -ex
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$OWNER" --password-stdin
 
-      - name: Clean up dangling images on VPS
-        run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "docker image prune -f"
+          docker pull ghcr.io/$OWNER/stock-market-tracker-backend:latest
+          docker pull ghcr.io/$OWNER/stock-market-tracker-frontend:latest
 
-      - name: Remove SSH key
-        if: always()
-        run: rm -f ~/.ssh/id_rsa
+          # Restart backend
+          docker stop stock-tracker-backend 2>/dev/null || true
+          docker rm   stock-tracker-backend 2>/dev/null || true
+          docker run -d \
+            --name stock-tracker-backend \
+            --restart unless-stopped \
+            --network stock-market-tracker_stock-net \
+            -p 4003:8000 \
+            --env-file /home/noki/stock-market-tracker/backend/.env \
+            ghcr.io/$OWNER/stock-market-tracker-backend:latest
+
+          # Restart frontend
+          docker stop stock-tracker-frontend 2>/dev/null || true
+          docker rm   stock-tracker-frontend 2>/dev/null || true
+          docker run -d \
+            --name stock-tracker-frontend \
+            --restart unless-stopped \
+            --network stock-market-tracker_stock-net \
+            -p 4002:3000 \
+            ghcr.io/$OWNER/stock-market-tracker-frontend:latest
+
+          docker image prune -f
+
+          sleep 4
+          curl -sf http://localhost:4003/health && echo " backend live"
+          curl -sf -o /dev/null http://localhost:4002 && echo " frontend live"
+          ENDSSH
