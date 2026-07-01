@@ -52,6 +52,7 @@ jobs:
           file: ./backend/Dockerfile
           target: production
           push: true
+          provenance: false
           tags: |
             ${{ steps.image-names.outputs.backend }}:latest
             ${{ steps.image-names.outputs.backend }}:${{ github.sha }}
@@ -65,6 +66,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ steps.image-names.outputs.frontend }}:latest
             ${{ steps.image-names.outputs.frontend }}:${{ github.sha }}
@@ -97,14 +99,16 @@ jobs:
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           BACKEND_IMAGE="ghcr.io/${OWNER}/stock-market-tracker/backend:latest"
           FRONTEND_IMAGE="ghcr.io/${OWNER}/stock-market-tracker/frontend:latest"
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin \
-            && cd ~/stock-market-tracker \
-            && git pull origin main \
-            && docker pull ${BACKEND_IMAGE} \
-            && docker pull ${FRONTEND_IMAGE} \
-            && BACKEND_IMAGE=${BACKEND_IMAGE} FRONTEND_IMAGE=${FRONTEND_IMAGE} \
-               docker compose -f docker-compose.prod.yml up -d"
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin &&
+            cd ~/stock-market-tracker &&
+            git pull origin main &&
+            docker pull ${BACKEND_IMAGE} &&
+            docker pull ${FRONTEND_IMAGE} &&
+            docker stop stock-market-tracker_backend_1 stock-market-tracker_frontend_1 2>/dev/null || true &&
+            docker rm   stock-market-tracker_backend_1 stock-market-tracker_frontend_1 2>/dev/null || true &&
+            BACKEND_IMAGE=${BACKEND_IMAGE} FRONTEND_IMAGE=${FRONTEND_IMAGE} docker-compose -f docker-compose.prod.yml up -d
+          "
 
       - name: Clean up dangling images on VPS
         run: |
