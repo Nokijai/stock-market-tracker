@@ -100,10 +100,11 @@ jobs:
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin \
             && cd ~/stock-market-tracker \
+            && git pull origin main \
             && docker pull ${BACKEND_IMAGE} \
             && docker pull ${FRONTEND_IMAGE} \
             && BACKEND_IMAGE=${BACKEND_IMAGE} FRONTEND_IMAGE=${FRONTEND_IMAGE} \
-               docker-compose -f docker-compose.prod.yml up -d"
+               docker compose -f docker-compose.prod.yml up -d"
 
       - name: Clean up dangling images on VPS
         run: |
