@@ -1,0 +1,48 @@
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
+import { useMarketStatus } from '../../hooks/useMarket'
+import { TrendingUp, LayoutDashboard, Briefcase, Eye, Newspaper, Bell, LogOut } from 'lucide-react'
+
+const NAV = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
+  { to: '/watchlist', label: 'Watchlist', icon: Eye },
+  { to: '/news', label: 'News', icon: Newspaper },
+  { to: '/alerts', label: 'Alerts', icon: Bell },
+]
+
+export function Navbar() {
+  const { user, logout } = useAuth()
+  const { data: status } = useMarketStatus()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const handleLogout = () => { logout(); navigate('/login') }
+
+  return (
+    <nav className="bg-gray-900 border-b border-gray-700 sticky top-0 z-30">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+        <Link to="/dashboard" className="flex items-center gap-2 font-bold text-blue-400 text-lg">
+          <TrendingUp size={20} /> StockTracker
+        </Link>
+        <div className="hidden md:flex items-center gap-1">
+          {NAV.map(({ to, label, icon: Icon }) => (
+            <Link key={to} to={to} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${location.pathname === to ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'}`}>
+              <Icon size={15} />{label}
+            </Link>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          {status && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className={`w-2 h-2 rounded-full ${status.is_open ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+              <span className={status.is_open ? 'text-green-400' : 'text-red-400'}>{status.is_open ? 'Market Open' : status.session === 'pre' ? 'Pre-Market' : status.session === 'after' ? 'After-Hours' : 'Closed'}</span>
+            </div>
+          )}
+          <span className="text-xs text-gray-500 hidden sm:block">{user?.email}</span>
+          <button onClick={handleLogout} className="text-gray-400 hover:text-gray-200 p-1 rounded"><LogOut size={16} /></button>
+        </div>
+      </div>
+    </nav>
+  )
+}
