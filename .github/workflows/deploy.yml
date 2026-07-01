@@ -61,11 +61,13 @@ jobs:
       - name: Deploy to VPS
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
         run: |
           OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             GHCR_TOKEN="$GHCR_TOKEN" \
             OWNER="$OWNER" \
@@ -76,7 +78,6 @@ jobs:
           docker pull ghcr.io/$OWNER/stock-market-tracker-backend:latest
           docker pull ghcr.io/$OWNER/stock-market-tracker-frontend:latest
 
-          # Restart backend
           docker stop stock-tracker-backend 2>/dev/null || true
           docker rm   stock-tracker-backend 2>/dev/null || true
           docker run -d \
@@ -87,7 +88,6 @@ jobs:
             --env-file /home/noki/stock-market-tracker/backend/.env \
             ghcr.io/$OWNER/stock-market-tracker-backend:latest
 
-          # Restart frontend
           docker stop stock-tracker-frontend 2>/dev/null || true
           docker rm   stock-tracker-frontend 2>/dev/null || true
           docker run -d \
@@ -98,7 +98,6 @@ jobs:
             ghcr.io/$OWNER/stock-market-tracker-frontend:latest
 
           docker image prune -f
-
           sleep 4
           curl -sf http://localhost:4003/health && echo " backend live"
           curl -sf -o /dev/null http://localhost:4002 && echo " frontend live"
