@@ -4,9 +4,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { PriceChart } from '../components/PriceChart'
 import { NewsCard } from '../components/NewsCard'
 import { Tooltip } from '../components/ui/Tooltip'
+import AISummaryCard from '../components/AISummaryCard'
 import { useQuote } from '../hooks/useMarket'
 import { useFundamentals } from '../hooks/useMarket'
 import { useTickerNews } from '../hooks/useNews'
+import { useAISummary } from '../hooks/useAISummary'
 import { formatCurrency, formatPercent, formatLargeNumber, getChangeColor } from '../lib/utils'
 import { Info } from 'lucide-react'
 
@@ -25,6 +27,7 @@ export function StockDetailPage() {
   const { data: quote } = useQuote(ticker)
   const { data: fundamentals } = useFundamentals(ticker)
   const { data: news = [] } = useTickerNews(ticker, 15)
+  const { data: aiSummary, isLoading: aiLoading, error: aiError } = useAISummary(ticker)
   const dayColor = getChangeColor(quote?.day_change_pct)
 
   return (
@@ -78,7 +81,12 @@ export function StockDetailPage() {
 
       <Card>
         <CardHeader><CardTitle>News</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <AISummaryCard
+            summary={aiSummary ?? null}
+            loading={aiLoading}
+            error={aiError ? String(aiError) : null}
+          />
           {news.length === 0 ? <p className="text-gray-500 text-sm text-center py-8">No news found.</p>
             : <div className="flex flex-col gap-3">{news.map(a => <NewsCard key={a.id} article={a}/>)}</div>
           }

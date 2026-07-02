@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6380/0"
 
     FINNHUB_API_KEY: str = ""
+    LITELLM_BASE_URL: str = ""
+    LITELLM_API_KEY: str = "dummy"
+    LITELLM_MODEL: str = "claude-sonnet-4-6"
     ENV: str = "development"
 
     class Config:

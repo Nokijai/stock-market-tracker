@@ -48,12 +48,12 @@ See [`PLAN.md`](./PLAN.md) for the full architecture, feature tiers, API choices
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 — Foundation | Auth + live quote | 🔲 Planning |
-| 1 — MVP | Full portfolio tracker + news | 🔲 Planning |
-| 2 — Intelligence | AI summaries + sentiment | 🔲 Planning |
-| 3 — Alerts | Price alerts + daily digest | 🔲 Planning |
-| 4 — Insights | AI engine + risk score | 🔲 Planning |
-| 5 — Production | CI/CD + monitoring | 🔲 Planning |
+| 0 — Foundation | Auth + live quote | ✅ Done |
+| 1 — MVP | Full portfolio tracker + news feed | ✅ Done |
+| 2 — Intelligence | AI summaries + sentiment badges | 🔨 In Progress |
+| 3 — Alerts | Price alerts + daily digest | 🔲 Planned |
+| 4 — Insights | AI engine + risk score | 🔲 Planned |
+| 5 — Production | Monitoring + performance | 🔲 Planned |
 
 ## Getting Started
 
