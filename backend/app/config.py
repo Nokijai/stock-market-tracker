@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./stock_tracker.db"
     REDIS_URL: str = "redis://localhost:6380/0"
 
-    FINNHUB_API_KEY: str = ""
+    FINNHUB_API_KEY: str = ""   # deprecated — kept for backward compat
+    MARKETAUX_API_KEY: str = ""
     LITELLM_BASE_URL: str = ""
     LITELLM_API_KEY: str = "dummy"
     LITELLM_MODEL: str = "claude-sonnet-4-6"
