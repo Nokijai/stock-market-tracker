@@ -94,6 +94,7 @@ jobs:
             --network stock-market-tracker_stock-net \
             -p 4003:8000 \
             --env-file /home/noki/stock-market-tracker/backend/.env \
+            -v /home/noki/stock-market-tracker/data:/app/data \
             ghcr.io/$OWNER/stock-market-tracker-backend:latest
 
           docker stop stock-tracker-frontend 2>/dev/null || true
