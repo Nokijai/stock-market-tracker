@@ -1,6 +1,7 @@
 import type { Holding } from '../types'
 import { formatCurrency, formatPercent, getChangeColor } from '../lib/utils'
 import { Button } from './ui/Button'
+import { Link } from 'react-router-dom'
 import { Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface Props { holding: Holding; onDelete: (id: number) => void; onEdit: (h: Holding) => void }
@@ -10,8 +11,10 @@ export function HoldingRow({ holding: h, onDelete, onEdit }: Props) {
   return (
     <tr className="border-b border-gray-700/50 hover:bg-gray-800/50 transition-colors">
       <td className="py-3 px-4">
-        <div className="font-bold text-gray-100">{h.ticker}</div>
-        <div className="text-xs text-gray-500 truncate max-w-[150px]">{h.company_name || '—'}</div>
+        <Link to={`/stock/${h.ticker}`} className="hover:text-blue-400 transition-colors">
+          <div className="font-bold text-gray-100">{h.ticker}</div>
+          <div className="text-xs text-gray-500 truncate max-w-[150px]">{h.company_name || '—'}</div>
+        </Link>
       </td>
       <td className="py-3 px-4 text-sm text-gray-300">{h.shares} @ {formatCurrency(h.avg_cost)}</td>
       <td className="py-3 px-4">
