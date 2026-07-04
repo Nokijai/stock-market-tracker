@@ -6,16 +6,22 @@ from app.models.user import User
 from app.models.watchlist import WatchlistItem
 from app.schemas.portfolio import WatchlistItemCreate, WatchlistItemOut
 from app.utils.auth import get_current_user
-from app.services.price_service import fetch_quote
+from app.services.price_service import fetch_quote, fetch_quotes_bulk
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
+
 
 @router.get("/", response_model=List[WatchlistItemOut])
 def list_watchlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     items = db.query(WatchlistItem).filter(WatchlistItem.user_id == current_user.id).all()
+    if not items:
+        return []
+    # Bulk-fetch all quotes in one shot to avoid N+1 yfinance calls
+    tickers = list({item.ticker for item in items})
+    quotes = fetch_quotes_bulk(tickers)
     result = []
     for item in items:
-        quote = fetch_quote(item.ticker)
+        quote = quotes.get(item.ticker)
         result.append({
             "id": item.id, "ticker": item.ticker, "added_at": item.added_at,
             "current_price": quote.get("price") if quote else None,
@@ -24,9 +30,10 @@ def list_watchlist(db: Session = Depends(get_db), current_user: User = Depends(g
         })
     return result
 
+
 @router.post("/", response_model=WatchlistItemOut, status_code=201)
 def add_to_watchlist(payload: WatchlistItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    ticker = payload.ticker.upper().strip()
+    ticker = payload.ticker  # already validated and uppercased by schema
     existing = db.query(WatchlistItem).filter(WatchlistItem.user_id == current_user.id, WatchlistItem.ticker == ticker).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"{ticker} already in watchlist")
@@ -41,6 +48,7 @@ def add_to_watchlist(payload: WatchlistItemCreate, db: Session = Depends(get_db)
         "day_change_pct": quote.get("day_change_pct") if quote else None,
         "company_name": quote.get("company_name") if quote else None,
     }
+
 
 @router.delete("/{ticker}", status_code=204)
 def remove_from_watchlist(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

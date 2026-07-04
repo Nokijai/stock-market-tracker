@@ -1,6 +1,7 @@
+import re
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel
 from app.database import get_db
 from app.models.user import User
@@ -12,6 +13,18 @@ from app.services.news_service import fetch_ticker_news
 from app.services.ai_service import summarise_news
 
 router = APIRouter(prefix="/api/news", tags=["news"])
+
+_TICKER_RE = re.compile(r'^[A-Z0-9.\-\^]{1,10}$')
+
+
+def _validate_ticker(ticker: str) -> str:
+    t = ticker.upper().strip()
+    if not _TICKER_RE.match(t):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid ticker symbol. Must be 1-10 characters: letters, digits, '.', '-', '^'.",
+        )
+    return t
 
 
 class AISummary(BaseModel):
@@ -35,9 +48,33 @@ def news_feed(db: Session = Depends(get_db), current_user: User = Depends(get_cu
     return articles
 
 
+# NOTE: /summary route MUST be declared BEFORE /{ticker} to avoid route shadowing
+@router.get("/{ticker}/summary", response_model=AISummary)
+def ticker_ai_summary(ticker: str, db: Session = Depends(get_db)):
+    """V2: AI-generated 3-bullet summary + sentiment for a ticker's recent news."""
+    t = _validate_ticker(ticker)
+    # Use cached articles or fetch fresh
+    articles = fetch_ticker_news(t, limit=10)
+    if not articles:
+        # Fall back to DB
+        rows = (db.query(NewsArticle)
+                .filter(NewsArticle.ticker == t)
+                .order_by(NewsArticle.published_at.desc())
+                .limit(10).all())
+        articles = [{"headline": r.headline} for r in rows]
+
+    result = summarise_news(t, articles)
+    if not result:
+        raise HTTPException(
+            status_code=503,
+            detail="AI summary unavailable — check LITELLM_BASE_URL config",
+        )
+    return AISummary(ticker=t, **result)
+
+
 @router.get("/{ticker}", response_model=List[NewsArticleOut])
 def ticker_news(ticker: str, db: Session = Depends(get_db), limit: int = Query(10, le=30)):
-    t = ticker.upper()
+    t = _validate_ticker(ticker)
     live = fetch_ticker_news(t, limit=limit)
     if live:
         from datetime import datetime, timezone
@@ -65,27 +102,3 @@ def ticker_news(ticker: str, db: Session = Depends(get_db), limit: int = Query(1
                 .order_by(NewsArticle.published_at.desc())
                 .limit(limit).all())
     return articles
-
-
-@router.get("/{ticker}/summary", response_model=AISummary)
-def ticker_ai_summary(ticker: str, db: Session = Depends(get_db)):
-    """V2: AI-generated 3-bullet summary + sentiment for a ticker's recent news."""
-    t = ticker.upper()
-    # Use cached articles or fetch fresh
-    articles = fetch_ticker_news(t, limit=10)
-    if not articles:
-        # Fall back to DB
-        rows = (db.query(NewsArticle)
-                .filter(NewsArticle.ticker == t)
-                .order_by(NewsArticle.published_at.desc())
-                .limit(10).all())
-        articles = [{"headline": r.headline} for r in rows]
-
-    result = summarise_news(t, articles)
-    if not result:
-        raise HTTPException(
-            status_code=503,
-            detail="AI summary unavailable — check LITELLM_BASE_URL config",
-        )
-    return AISummary(ticker=t, **result)
-

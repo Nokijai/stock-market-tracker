@@ -36,4 +36,9 @@ COPY --from=builder /install /usr/local
 COPY . .
 
 ENV APP_ENV=production
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# IMPORTANT: Run with 1 worker only.
+# APScheduler (background scheduler) lives in the same process as uvicorn.
+# With multiple workers, each worker spawns its own scheduler instance,
+# causing duplicate cron jobs, double API calls, and double DB writes.
+# To scale throughput, run multiple containers behind a load balancer instead.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

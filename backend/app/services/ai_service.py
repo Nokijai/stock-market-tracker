@@ -3,7 +3,7 @@ V2 AI Service — news summarisation + sentiment via LiteLLM (claude-sonnet-4-6)
 """
 import json
 from typing import List, Dict, Optional
-from openai import OpenAI
+from openai import OpenAI, APITimeoutError, APIStatusError, APIConnectionError
 from app.config import get_settings
 from app.utils.cache import cache_get, cache_set
 import structlog
@@ -26,6 +26,9 @@ News headlines (last 7 days):
 
 Return JSON only."""
 
+# LiteLLM / OpenAI request timeout in seconds
+_REQUEST_TIMEOUT = 20.0
+
 
 def _get_client() -> Optional[OpenAI]:
     if not settings.LITELLM_BASE_URL:
@@ -33,6 +36,7 @@ def _get_client() -> Optional[OpenAI]:
     return OpenAI(
         api_key=settings.LITELLM_API_KEY or "dummy",
         base_url=settings.LITELLM_BASE_URL,
+        timeout=_REQUEST_TIMEOUT,
     )
 
 
@@ -61,6 +65,7 @@ def summarise_news(ticker: str, articles: List[Dict]) -> Optional[Dict]:
     if not headlines:
         return None
 
+    raw = ""
     try:
         response = client.chat.completions.create(
             model=settings.LITELLM_MODEL,
@@ -86,7 +91,7 @@ def summarise_news(ticker: str, articles: List[Dict]) -> Optional[Dict]:
 
         # Validate shape
         if not all(k in result for k in ("bullets", "sentiment", "reason")):
-            raise ValueError(f"Missing keys in AI response: {result}")
+            raise ValueError(f"Missing keys in AI response: {list(result.keys())}")
         if result["sentiment"] not in ("Bullish", "Neutral", "Bearish"):
             result["sentiment"] = "Neutral"
         if not isinstance(result["bullets"], list):
@@ -96,6 +101,15 @@ def summarise_news(ticker: str, articles: List[Dict]) -> Optional[Dict]:
         log.info("ai_summary_ok", ticker=ticker, sentiment=result["sentiment"])
         return result
 
+    except APITimeoutError:
+        log.warning("ai_summary_timeout", ticker=ticker, timeout_s=_REQUEST_TIMEOUT)
+        return None
+    except APIConnectionError as e:
+        log.error("ai_summary_connection_error", ticker=ticker, error=str(e))
+        return None
+    except APIStatusError as e:
+        log.error("ai_summary_api_error", ticker=ticker, status=e.status_code, error=str(e))
+        return None
     except json.JSONDecodeError as e:
         log.error("ai_summary_json_error", ticker=ticker, error=str(e), raw=raw[:200])
         return None

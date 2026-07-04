@@ -10,7 +10,7 @@ openai==1.54.0
 python-multipart==0.0.12
 httpx==0.27.2
 yfinance==1.5.1
-finnhub-python==2.4.20  # deprecated — remove in V3
+curl_cffi>=0.7.0          # Required by yfinance>=1.5.1 to avoid Yahoo Finance 429 errors
 apscheduler==3.10.4
 redis==5.1.1
 aiosmtplib==3.0.1
