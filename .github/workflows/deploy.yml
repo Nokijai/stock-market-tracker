@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  REPO_OWNER: Nokijai
+  REPO_OWNER: nokijai
   BACKEND_IMAGE: stock-market-tracker/backend
   FRONTEND_IMAGE: stock-market-tracker/frontend
 
