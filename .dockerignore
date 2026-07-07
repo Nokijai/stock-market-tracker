@@ -1,0 +1,21 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+Dockerfile
+README.md
+PLAN.md
+.env
+.env.*
+*.md
+
+# Node
+node_modules
+npm-debug.log
+
+# Dev
+.vscode
+.idea
+*.swp

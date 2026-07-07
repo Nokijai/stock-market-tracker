@@ -1,6 +1,6 @@
 # 📈 Stock Market Tracker — Full Project Plan
 
-> **Target User:** Beginner investor | **Developer:** Solo | **Stack:** FastAPI + React + LiteLLM (claude-sonnet-4-6) | **Deploy:** VPS (178.128.223.228) via Docker + GitHub Actions
+> **Target User:** Beginner investor | **Developer:** Solo | **Stack:** FastAPI + React + openai SDK → yuanyuaicloud.cn (glm-5.2) | **Deploy:** VPS (178.128.223.228) via Docker + GitHub Actions
 
 ---
 
@@ -29,9 +29,9 @@ Build a **personal stock market tracker** that helps a beginner investor:
 - Stay informed via plain-English AI news summaries for their holdings
 - Receive actionable guidance — not Wall Street jargon
 
-**AI Model:** `claude-sonnet-4-6` via LiteLLM (existing litellm.cslui.com setup)
-- Sonnet 4.6 is the right call: news summarisation + sentiment classification are structured extraction tasks, not deep reasoning. Fast, cost-effective, more than capable.
-- Upgrade to Opus 4.6 only for V3 AI Insight Engine if deeper portfolio analysis is needed.
+**AI Model:** `glm-5.2` via yuanyuaicloud.cn (OpenAI-compatible API).
+- glm-5.2 is the right call: news summarisation + sentiment classification are structured extraction tasks, not deep reasoning. Fast, cost-effective.
+- Only upgrade to a reasoning model for V3 AI Insight Engine if deeper portfolio analysis is needed.
 
 **Out of scope:** Automated trading, real-time tick data, options/derivatives, institutional data.
 
@@ -52,8 +52,8 @@ Build a **personal stock market tracker** that helps a beginner investor:
        │             │              │              │
 ┌──────▼──────┐ ┌────▼────┐ ┌──────▼──────┐ ┌────▼────────────┐
 │  Scheduler  │ │  Cache  │ │  Database   │ │  AI/NLP Layer   │
-│ (APScheduler│ │ (Redis) │ │ (SQLite →   │ │ LiteLLM client  │
-│  or cron)   │ │         │ │  PostgreSQL) │ │ sonnet-4.6 ✦   │
+│ (APScheduler│ │ (Redis) │ │ (SQLite →   │ │ openai SDK →   │
+│  or cron)   │ │         │ │  PostgreSQL) │ │ glm-5.2        │
 └──────┬──────┘ └─────────┘ └─────────────┘ └─────────────────┘
        │
 ┌──────▼──────────────────────────────────────────────────────────┐
@@ -150,8 +150,8 @@ Build a **personal stock market tracker** that helps a beginner investor:
 
 | Option | Cost | Notes |
 |---|---|---|
-| **LiteLLM → claude-sonnet-4-6** | Existing setup | ✅ Use this — fast, structured extraction, great for summaries |
-| **LiteLLM → claude-opus-4-6** | Existing setup | Reserve for V3 deep insights if needed |
+| **openai SDK → yuanyuaicloud.cn/glm-5.2** | Existing setup | ✅ Use this — fast, structured extraction, great for summaries |
+| **openai SDK → deep-reasoning model** | Existing setup | Reserve for V3 deep insights if needed |
 | **sumy (extractive)** | Free | Fallback if LiteLLM unavailable; lower quality |
 
 **Per-summary cost:** ~$0.001–0.003 at personal scale (~1000 summaries/mo ≈ $1–3/mo)
@@ -170,8 +170,8 @@ Backend:   Python 3.11 · FastAPI · Uvicorn · SQLAlchemy 2.0
            Alembic (migrations) · Pydantic v2 · python-jose (JWT)
            httpx / aiohttp · APScheduler 3.x
 
-AI/NLP:    openai Python SDK → pointed at litellm.cslui.com
-           Model: claude-sonnet-4-6
+AI/NLP:    openai Python SDK → pointed at yuanyuaicloud.cn/v1
+           Model: glm-5.2 (via yuanyuaicloud.cn/v1)
 
 Database:  SQLite (MVP) → PostgreSQL 16 (V2+)
 Cache:     Redis 7
@@ -218,7 +218,7 @@ DevOps:    Docker + docker-compose · GitHub Actions → GHCR → SSH deploy
          ↓
 [Concatenate top 5 articles into context]
          ↓
-[LiteLLM → claude-sonnet-4-6 prompt]
+[yuanyuaicloud.cn/v1 → glm-5.2 prompt]
  "You are a financial assistant for a beginner investor.
   Summarise the following news about {ticker} in 3 bullet points.
   Use plain English. Highlight any risks or opportunities.
@@ -462,7 +462,7 @@ CREATE TABLE fundamentals_cache (
 | yfinance | Free | Free | Free |
 | Finnhub | Free | Free | Free |
 | Marketaux | — | $9/mo | $9/mo |
-| LiteLLM (sonnet-4-6) | ~$1–2/mo | ~$2–5/mo | ~$5–10/mo |
+| LiteLLM | ~$1–2/mo | ~$2–5/mo | ~$5–10/mo |
 | SendGrid | Free (100/day) | Free | Free |
 | Polygon.io | — | — | $29/mo |
 | VPS (existing) | Shared | Shared | Shared |
@@ -584,11 +584,11 @@ stock-market-tracker/
 - [ ] **Alpha Vantage:** https://alphavantage.co — free, 25 req/day
 - [ ] **Marketaux:** https://marketaux.com — free, 100 req/day
 - [ ] **SendGrid:** https://sendgrid.com — free, 100 emails/day
-- [ ] **LiteLLM:** Already configured at litellm.cslui.com — use existing API key
-
-### LiteLLM Config (`.env`)
-```
-OPENAI_API_KEY=<your-litellm-key>
-OPENAI_BASE_URL=https://litellm.cslui.com
-AI_MODEL=claude-sonnet-4-6
-```
+- [ ] **yuanyuaicloud.cn:** Already configured — uses glm-5.2 via yuanyuaicloud.cn/v1
+|- [ ] **yuanyuaicloud.cn:** OpenAI-compatible API, uses glm-5.2 — set `LITELLM_BASE_URL` in `.env`|
+|### LLM Config (`.env`)
+|```
+|LITELLM_API_KEY=<your-api-key>
+|LITELLM_BASE_URL=https://yuanyuaicloud.cn/v1
+|LITELLM_MODEL=glm-5.2
+|```

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.config import get_settings
 
@@ -22,4 +22,9 @@ def get_db():
 
 def init_db():
     from app.models import user, holding, watchlist, price_cache, news, alert, fundamentals  # noqa
+    # Enable WAL journal mode to prevent write lock contention between the web app
+    # and APScheduler background jobs (both write to SQLite every 15 minutes).
+    with engine.connect() as conn:
+        conn.execute(text("PRAGMA journal_mode=WAL"))
+        conn.commit()
     Base.metadata.create_all(bind=engine)

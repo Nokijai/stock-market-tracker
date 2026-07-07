@@ -21,6 +21,10 @@ export interface Fundamentals {
   beta?: number; market_cap?: number; sector?: string; industry?: string
 }
 export interface MarketStatus { is_open: boolean; session: string; timezone: string }
+export interface BenchmarkResponse {
+  ticker: string; period: string; benchmark: string
+  ticker_data: HistoryPoint[]; spy_data: HistoryPoint[]
+}
 export interface NewsArticle {
   id: number; ticker: string; headline: string; url?: string; source?: string
   sentiment?: number; image?: string; published_at?: string

@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PortfolioPage } from './pages/PortfolioPage'
+import { ImportPage } from './pages/ImportPage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import { NewsPage } from './pages/NewsPage'
 import { AlertsPage } from './pages/AlertsPage'
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
       <Route path="/portfolio" element={<PrivateRoute><PortfolioPage /></PrivateRoute>} />
+      <Route path="/import" element={<PrivateRoute><ImportPage /></PrivateRoute>} />
       <Route path="/watchlist" element={<PrivateRoute><WatchlistPage /></PrivateRoute>} />
       <Route path="/news" element={<PrivateRoute><NewsPage /></PrivateRoute>} />
       <Route path="/alerts" element={<PrivateRoute><AlertsPage /></PrivateRoute>} />

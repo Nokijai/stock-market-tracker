@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { usePortfolio, usePortfolioSummary, useDeleteHolding } from '../hooks/usePortfolio'
 import { Layout } from '../components/layout/Layout'
@@ -6,10 +7,11 @@ import { Button } from '../components/ui/Button'
 import { HoldingRow } from '../components/HoldingRow'
 import { AddHoldingModal } from '../components/AddHoldingModal'
 import { formatCurrency, formatPercent, getChangeColor } from '../lib/utils'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import type { Holding } from '../types'
 
 export function PortfolioPage() {
+  const navigate = useNavigate()
   const { data: holdings = [], isLoading } = usePortfolio()
   const { data: summary } = usePortfolioSummary()
   const deleteHolding = useDeleteHolding()
@@ -23,7 +25,10 @@ export function PortfolioPage() {
           <h1 className="text-2xl font-bold text-gray-100">Portfolio</h1>
           {summary && <p className={`text-sm mt-1 ${getChangeColor(summary.total_return_pct)}`}>{formatCurrency(summary.total_market_value)} · {formatPercent(summary.total_return_pct)} all time</p>}
         </div>
-        <Button onClick={() => setShowAdd(true)}><Plus size={16} className="mr-1"/>Add Holding</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate('/import')}><Upload size={16} className="mr-1"/>Import CSV</Button>
+          <Button onClick={() => setShowAdd(true)}><Plus size={16} className="mr-1"/>Add Holding</Button>
+        </div>
       </div>
 
       {summary && (

@@ -2,30 +2,24 @@
 __pycache__/
 *.py[cod]
 *.pyo
-.venv/
-venv/
 *.egg-info/
 dist/
-build/
+*.egg
+.venv/
+venv/
+*.so
 
-# Environment
+# Environment files — may contain API keys
 .env
-*.env
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
+.env.local
+.env.production
 
 # Node
 node_modules/
-.next/
-dist/
-build/
+npm-debug.log*
 
-# Logs
-*.log
-logs/
+# Build
+frontend/dist/
 
 # IDE
 .vscode/
@@ -37,10 +31,10 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Docker
-*.tar
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
 
-# Coverage
-.coverage
-htmlcov/
-.pytest_cache/
+# Logs
+*.log

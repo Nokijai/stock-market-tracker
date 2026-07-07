@@ -11,13 +11,35 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     DATABASE_URL: str = "sqlite:///./stock_tracker.db"
-    REDIS_URL: str = "redis://localhost:6380/0"
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # --- Alert Notification Settings ---
+
+    # ntfy.sh topic for push notifications.
+    # Sign up at https://ntfy.sh, pick a topic name, and set it here.
+    # Example: "my-stock-alerts" sends notifications to https://ntfy.sh/my-stock-alerts
+    NTFY_TOPIC: str | None = None
+
+    # Optional SMTP settings for email fallback notifications.
+    # SMTP_HOST: str = ""
+    # SMTP_PORT: int = 587
+    # SMTP_USER: str = ""
+    # SMTP_PASSWORD: str = ""
+    # SMTP_FROM: str = "alerts@example.com"
+    # NOTIFY_EMAIL: str = ""
 
     FINNHUB_API_KEY: str = ""   # deprecated -- kept for backward compat
     MARKETAUX_API_KEY: str = ""
-    LITELLM_BASE_URL: str = ""
-    LITELLM_API_KEY: str = "dummy"
-    LITELLM_MODEL: str = "claude-sonnet-4-6"
+    LITELLM_BASE_URL: str = "https://yuanyuaicloud.cn/v1"
+    LITELLM_API_KEY: str = ""
+    LITELLM_MODEL: str = "glm-5.2"
+
+    # SMTP / Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "alerts@stock-tracker"
     ENV: str = "development"
     CORS_ORIGINS: str = "https://stock.worldofnoki.com"
 

@@ -8,7 +8,7 @@
 
 Track your stock portfolio, stay informed with plain-English AI news digests for your holdings, and receive smart alerts — without needing Wall Street knowledge.
 
-**AI Model:** `claude-sonnet-4-6` via LiteLLM for news summarisation and sentiment analysis.
+**AI Model:** `glm-5.2` via yuanyuaicloud.cn (OpenAI-compatible API) for news summarisation and sentiment analysis.
 
 ## Features
 
@@ -26,7 +26,7 @@ Track your stock portfolio, stay informed with plain-English AI news digests for
 |---|---|
 | Frontend | React 18 + Vite + TypeScript + Tailwind + shadcn/ui |
 | Backend | FastAPI + SQLAlchemy + APScheduler |
-| AI/NLP | LiteLLM → claude-sonnet-4-6 |
+| AI/NLP | openai SDK → yuanyuaicloud.cn/v1 (glm-5.2) |
 | Database | SQLite (MVP) → PostgreSQL (V2) |
 | Cache | Redis |
 | Alerts | SendGrid + Ntfy.sh |

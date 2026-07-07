@@ -1,5 +1,5 @@
 """
-V2 AI Service — news summarisation + sentiment via LiteLLM (claude-sonnet-4-6).
+V2 AI Service — news summarisation + sentiment via yuanyuaicloud.cn (glm-5.2).
 """
 import json
 from typing import List, Dict, Optional
@@ -26,7 +26,7 @@ News headlines (last 7 days):
 
 Return JSON only."""
 
-# LiteLLM / OpenAI request timeout in seconds
+# yuanyuaicloud.cn / OpenAI request timeout in seconds
 _REQUEST_TIMEOUT = 20.0
 
 
@@ -56,7 +56,7 @@ def summarise_news(ticker: str, articles: List[Dict]) -> Optional[Dict]:
 
     client = _get_client()
     if not client:
-        log.warning("ai_service_unavailable", reason="LITELLM_BASE_URL not set")
+        log.warning("ai_service_unavailable", reason="LLM_BASE_URL not set")
         return None
 
     headlines = "\n".join(

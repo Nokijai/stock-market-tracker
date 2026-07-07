@@ -6,7 +6,7 @@ from starlette.requests import Request
 from contextlib import asynccontextmanager
 from app.database import init_db
 from app.scheduler.setup import start_scheduler, stop_scheduler
-from app.routers import auth, portfolio, watchlist, market, news, alerts
+from app.routers import auth, portfolio, watchlist, market, news, alerts, imports
 from app.config import get_settings
 import structlog
 import os
@@ -71,6 +71,7 @@ app.include_router(watchlist.router)
 app.include_router(market.router)
 app.include_router(news.router)
 app.include_router(alerts.router)
+app.include_router(imports.router)
 
 @app.get("/health")
 def health():

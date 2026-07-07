@@ -1,12 +1,18 @@
-name: Build & Deploy
+name: Build & Deploy StockTracker
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  REPO_OWNER: Nokijai
+  BACKEND_IMAGE: stock-market-tracker/backend
+  FRONTEND_IMAGE: stock-market-tracker/frontend
+
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -15,103 +21,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set lowercase owner
-        run: echo "OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v6
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
         with:
           context: ./backend
-          file: ./backend/Dockerfile
-          target: production
           push: true
-          tags: |
-            ghcr.io/${{ env.OWNER }}/stock-market-tracker-backend:latest
-            ghcr.io/${{ env.OWNER }}/stock-market-tracker-backend:${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/${{ env.BACKEND_IMAGE }}:latest
+          target: production
 
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          file: ./frontend/Dockerfile
           push: true
-          tags: |
-            ghcr.io/${{ env.OWNER }}/stock-market-tracker-frontend:latest
-            ghcr.io/${{ env.OWNER }}/stock-market-tracker-frontend:${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_OWNER }}/${{ env.FRONTEND_IMAGE }}:latest
 
   deploy:
-    needs: build-and-push
+    needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-
     steps:
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -t ed25519 ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Deploy to VPS
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            -o ServerAliveInterval=30 \
-            -o ServerAliveCountMax=20 \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            GHCR_TOKEN="$GHCR_TOKEN" \
-            OWNER="$OWNER" \
-            bash -s << 'ENDSSH'
-          set -ex
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$OWNER" --password-stdin
-
-          docker pull ghcr.io/$OWNER/stock-market-tracker-backend:latest
-          docker pull ghcr.io/$OWNER/stock-market-tracker-frontend:latest
-
-          # Stop ANY container holding ports 4002/4003 (old compose names or new names)
-          docker ps -q --filter publish=4003 | xargs -r docker stop || true
-          docker ps -q --filter publish=4002 | xargs -r docker stop || true
-          docker ps -aq --filter name=stock-market-tracker_backend_1  | xargs -r docker rm -f || true
-          docker ps -aq --filter name=stock-market-tracker_frontend_1 | xargs -r docker rm -f || true
-          docker ps -aq --filter name=stock-tracker-backend  | xargs -r docker rm -f || true
-          docker ps -aq --filter name=stock-tracker-frontend | xargs -r docker rm -f || true
-          docker run -d \
-            --name stock-tracker-backend \
-            --restart unless-stopped \
-            --network stock-market-tracker_stock-net \
-            -p 4003:8000 \
-            --env-file /home/noki/stock-market-tracker/backend/.env \
-            -v /home/noki/stock-market-tracker/data:/app/data \
-            ghcr.io/$OWNER/stock-market-tracker-backend:latest
-
-          docker stop stock-tracker-frontend 2>/dev/null || true
-          docker rm   stock-tracker-frontend 2>/dev/null || true
-          docker run -d \
-            --name stock-tracker-frontend \
-            --restart unless-stopped \
-            --network stock-market-tracker_stock-net \
-            -p 4002:3000 \
-            ghcr.io/$OWNER/stock-market-tracker-frontend:latest
-
-          docker image prune -f
-          sleep 5
-          curl -sf http://localhost:4003/health && echo " backend live"
-          for i in $(seq 1 15); do
-            curl -sf -o /dev/null http://localhost:4002 && echo " frontend live" && break
-            echo "waiting for frontend... ($i)"
-            sleep 2
-          done
-          ENDSSH
+      - name: SSH into VPS and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 178.128.223.228
+          username: noki
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/noki/stock-market-tracker
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f

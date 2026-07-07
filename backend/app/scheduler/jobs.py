@@ -7,10 +7,14 @@ from app.models.news import NewsArticle
 from app.services.price_service import fetch_quote
 from app.services.news_service import fetch_ticker_news
 from app.utils.market_hours import is_market_open
+from app.services.notify_service import send_alert_notification
 from datetime import datetime, timezone
 import structlog
 
 log = structlog.get_logger()
+
+import asyncio
+import threading
 
 def refresh_prices():
     """Refresh prices for all tracked tickers. Runs every 15 min."""
@@ -118,6 +122,19 @@ def check_alerts():
                 alert.is_active = False
                 alert.triggered_at = datetime.now(timezone.utc)
                 log.info("Alert triggered", ticker=alert.ticker, type=alert.alert_type, threshold=alert.threshold, price=price)
+                # Send notifications in a background thread
+                threading.Thread(
+                    target=lambda: asyncio.run(
+                        send_alert_notification(
+                            ticker=alert.ticker,
+                            alert_type=alert.alert_type,
+                            threshold=alert.threshold,
+                            price=price,
+                            timestamp=alert.triggered_at,
+                        )
+                    ),
+                    daemon=True,
+                ).start()
         db.commit()
     except Exception as e:
         log.error("Alert check failed", error=str(e))

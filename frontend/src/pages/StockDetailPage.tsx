@@ -7,10 +7,12 @@ import { Tooltip } from '../components/ui/Tooltip'
 import AISummaryCard from '../components/AISummaryCard'
 import { useQuote } from '../hooks/useMarket'
 import { useFundamentals } from '../hooks/useMarket'
+import { useBenchmark } from '../hooks/useMarket'
 import { useTickerNews } from '../hooks/useNews'
 import { useAISummary } from '../hooks/useAISummary'
 import { formatCurrency, formatPercent, formatLargeNumber, getChangeColor } from '../lib/utils'
 import { Info } from 'lucide-react'
+import { useState } from 'react'
 
 const METRIC_TOOLTIPS: Record<string, string> = {
   pe_ratio: 'Price-to-Earnings ratio. How much investors pay per $1 of earnings. Lower generally means cheaper. The average S&P 500 P/E is ~22.',
@@ -20,12 +22,19 @@ const METRIC_TOOLTIPS: Record<string, string> = {
   market_cap: 'Total market value of all shares. Large-cap (>$10B) = established; Small-cap (<$2B) = higher risk/reward.',
   week_52_high: 'Highest price over the last 52 weeks. Useful to see if the stock is near its peak.',
   week_52_low: 'Lowest price over the last 52 weeks. Useful to see if the stock is near a bottom.',
-}
+  sector: 'Industry sector the company operates in. Helps understand concentration risk — if all your holdings are in one sector, a downturn hits harder.',
+  industry: 'Specific industry within the sector. More granular than sector — helps spot hidden concentration (e.g. two tech companies in the same niche).',
+  volume: 'Number of shares traded today. Higher volume = more liquidity. Unusually high volume often signals big news or institutional activity.',
+  day_change_pct: "Today's price change as a percentage of yesterday's close. Green = up, red = down. A 2% move is normal for most stocks.",
+  avg_volume: 'Average daily trading volume over the last 3 months. Compare with today\'s volume to spot unusual activity.',
+};
 
 export function StockDetailPage() {
   const { ticker } = useParams<{ ticker: string }>()
+  const [benchmarkPeriod, setBenchmarkPeriod] = useState('1mo')
   const { data: quote } = useQuote(ticker)
   const { data: fundamentals } = useFundamentals(ticker)
+  const { data: benchmark } = useBenchmark(ticker, benchmarkPeriod)
   const { data: news = [] } = useTickerNews(ticker, 15)
   const { data: aiSummary, isLoading: aiLoading, error: aiError } = useAISummary(ticker)
   const dayColor = getChangeColor(quote?.day_change_pct)
@@ -48,7 +57,7 @@ export function StockDetailPage() {
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         <Card>
           <CardHeader><CardTitle>Price History</CardTitle></CardHeader>
-          <CardContent><PriceChart ticker={ticker!} /></CardContent>
+          <CardContent><PriceChart ticker={ticker!} period={benchmarkPeriod} onPeriodChange={setBenchmarkPeriod} benchmarkData={benchmark?.spy_data} /></CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Fundamentals</CardTitle></CardHeader>

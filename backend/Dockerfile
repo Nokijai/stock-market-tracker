@@ -25,6 +25,8 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY . .
 
+RUN mkdir -p /app/data
+
 ENV APP_ENV=development
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
@@ -34,6 +36,8 @@ FROM python:3.11-slim AS production
 WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY . .
+
+RUN mkdir -p /app/data
 
 ENV APP_ENV=production
 # IMPORTANT: Run with 1 worker only.

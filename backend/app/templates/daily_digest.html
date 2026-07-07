@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Tracker Daily Digest</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:'Segoe UI',Arial,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8;">
+        <tr>
+            <td align="center" style="padding:24px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg,#1a73e8,#0d47a1);padding:28px 32px;">
+                            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;">Daily Portfolio Digest</h1>
+                            <p style="margin:6px 0 0;color:#b3d4fc;font-size:14px;">Hi {{ user_name }}, here's your market summary</p>
+                        </td>
+                    </tr>
+
+                    <!-- Portfolio Overview -->
+                    <tr>
+                        <td style="padding:24px 32px 12px;">
+                            <h2 style="margin:0 0 16px;font-size:16px;color:#333;font-weight:600;border-bottom:2px solid #1a73e8;padding-bottom:6px;">Portfolio Overview</h2>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="33%" align="center" style="padding:8px 4px;">
+                                        <div style="font-size:22px;font-weight:700;color:#333;">${{ "{:,.2f}".format(summary.get('total_market_value', 0)) }}</div>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">Total Value</div>
+                                    </td>
+                                    <td width="33%" align="center" style="padding:8px 4px;">
+                                        {% set pnl = summary.get('total_unrealized_pnl', 0) %}
+                                        <div style="font-size:22px;font-weight:700;color:{{ '#e53935' if pnl < 0 else '#2e7d32' }};">
+                                            {{ '+' if pnl >= 0 else '' }}${{ "{:,.2f}".format(pnl) }}
+                                        </div>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">P&amp;L</div>
+                                    </td>
+                                    <td width="33%" align="center" style="padding:8px 4px;">
+                                        {% set ret = summary.get('total_return_pct', 0) %}
+                                        <div style="font-size:22px;font-weight:700;color:{{ '#e53935' if ret < 0 else '#2e7d32' }};">
+                                            {{ '+' if ret >= 0 else '' }}{{ "{:.2f}".format(ret) }}%
+                                        </div>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">Return</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="font-size:12px;color:#999;text-align:center;margin:8px 0 0;">
+                                {{ summary.get('holdings_count', 0) }} holding{{ 's' if summary.get('holdings_count', 0) != 1 else '' }} &middot; Cost Basis: ${{ "{:,.2f}".format(summary.get('total_cost_basis', 0)) }}
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Top Movers -->
+                    {% if holdings %}
+                    <tr>
+                        <td style="padding:12px 32px;">
+                            <h2 style="margin:0 0 12px;font-size:16px;color:#333;font-weight:600;border-bottom:2px solid #1a73e8;padding-bottom:6px;">Top Movers</h2>
+
+                            <!-- Gainers -->
+                            {% set gainers = holdings | selectattr('unrealized_gain_pct', 'ne', none) | selectattr('unrealized_gain_pct', 'gt', 0) | sort(attribute='unrealized_gain_pct', reverse=True) | list %}
+                            {% if gainers %}
+                            <p style="font-size:13px;color:#2e7d32;font-weight:600;margin:8px 0 4px;">&#9650; Top Gainers</p>
+                            <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;">
+                                {% for h in gainers[:5] %}
+                                <tr>
+                                    <td style="color:#555;font-weight:600;">{{ h.get('ticker', h.get('company_name', '?')) }}</td>
+                                    <td align="right" style="color:#2e7d32;">+{{ "{:.2f}".format(h['unrealized_gain_pct']) }}%</td>
+                                    <td align="right" style="color:#555;">${{ "{:,.2f}".format(h.get('current_value', 0)) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                            {% endif %}
+
+                            <!-- Losers -->
+                            {% set losers = holdings | selectattr('unrealized_gain_pct', 'ne', none) | selectattr('unrealized_gain_pct', 'lt', 0) | sort(attribute='unrealized_gain_pct') | list %}
+                            {% if losers %}
+                            <p style="font-size:13px;color:#e53935;font-weight:600;margin:12px 0 4px;">&#9660; Top Losers</p>
+                            <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;">
+                                {% for h in losers[:5] %}
+                                <tr>
+                                    <td style="color:#555;font-weight:600;">{{ h.get('ticker', h.get('company_name', '?')) }}</td>
+                                    <td align="right" style="color:#e53935;">{{ "{:.2f}".format(h['unrealized_gain_pct']) }}%</td>
+                                    <td align="right" style="color:#555;">${{ "{:,.2f}".format(h.get('current_value', 0)) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Watchlist -->
+                    {% if watchlist %}
+                    <tr>
+                        <td style="padding:12px 32px 24px;">
+                            <h2 style="margin:0 0 12px;font-size:16px;color:#333;font-weight:600;border-bottom:2px solid #1a73e8;padding-bottom:6px;">Watchlist</h2>
+                            <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;">
+                                <tr style="color:#888;font-size:11px;">
+                                    <th align="left" style="font-weight:400;">Ticker</th>
+                                    <th align="right" style="font-weight:400;">Price</th>
+                                    <th align="right" style="font-weight:400;">Change</th>
+                                </tr>
+                                {% for item in watchlist %}
+                                <tr>
+                                    <td style="color:#333;font-weight:600;">{{ item.get('ticker', '?') }}</td>
+                                    <td align="right" style="color:#333;">${{ "{:,.2f}".format(item.get('price', 0)) }}</td>
+                                    {% set chg = item.get('day_change_pct', 0) %}
+                                    <td align="right" style="color:{{ '#e53935' if chg < 0 else '#2e7d32' }};">
+                                        {{ '+' if chg >= 0 else '' }}{{ "{:.2f}".format(chg) }}%
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#f8f9fa;padding:16px 32px;text-align:center;">
+                            <p style="margin:0;font-size:11px;color:#999;">
+                                Stock Market Tracker &middot; Automated daily digest<br>
+                                <a href="#" style="color:#1a73e8;text-decoration:none;">Unsubscribe</a> &middot;
+                                <a href="#" style="color:#1a73e8;text-decoration:none;">Settings</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
